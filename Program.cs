@@ -1,32 +1,43 @@
-using Microsoft.EntityFrameworkCore;
-using SmartInvoice.API.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
+using SmartInvoice.API.Data;
 using SmartInvoice.API.Services;
-
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<PdfService>();
 
+var connectionString =
+    builder.Configuration["DATABASE_URL"]
+    ?? builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Database connection string is missing.");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
-var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
+
+var jwtKey = jwtSettings["Key"]
+    ?? throw new InvalidOperationException("JWT key is missing.");
+
+var key = Encoding.UTF8.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
+    options.DefaultAuthenticateScheme =
+        JwtBearerDefaults.AuthenticationScheme;
 
+    options.DefaultChallengeScheme =
+        JwtBearerDefaults.AuthenticationScheme;
+})
 .AddJwtBearer(options =>
 {
     options.RequireHttpsMetadata = false;
     options.SaveToken = true;
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -40,22 +51,25 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddControllers();
-
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.UseAuthentication();
 app.UseHttpsRedirection();
-app.UseAuthorization();
-app.MapControllers();
-app.Run();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "healthy"
+}));
+
+app.Run();

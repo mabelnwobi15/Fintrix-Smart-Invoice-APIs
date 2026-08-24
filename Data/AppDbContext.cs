@@ -5,11 +5,31 @@ namespace SmartInvoice.API.Data;
 
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) {}
+    public AppDbContext(DbContextOptions<AppDbContext> options)
+        : base(options)
+    {
+    }
 
-    public DbSet<User> Users { get; set; }
-    public DbSet<Client> Clients { get; set; }
-    public DbSet<Invoice> Invoices { get; set; }
-    public DbSet<InvoiceItem> InvoiceItems { get; set; }
-    public DbSet<Payment> Payments { get; set; }
+    public DbSet<User> Users { get; set; } = null!;
+    public DbSet<Client> Clients { get; set; } = null!;
+    public DbSet<Invoice> Invoices { get; set; } = null!;
+    public DbSet<InvoiceItem> InvoiceItems { get; set; } = null!;
+    public DbSet<Payment> Payments { get; set; } = null!;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Invoice>()
+            .Property(x => x.TotalAmount)
+            .HasPrecision(18, 2);
+
+        modelBuilder.Entity<InvoiceItem>()
+            .Property(x => x.Price)
+            .HasPrecision(18, 2);
+
+        modelBuilder.Entity<Payment>()
+            .Property(x => x.Amount)
+            .HasPrecision(18, 2);
+
+        base.OnModelCreating(modelBuilder);
+    }
 }

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SmartInvoice.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f05499309ac131d85e0a6710826f43cd043de51a")]
 [assembly: System.Reflection.AssemblyProductAttribute("SmartInvoice.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SmartInvoice.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

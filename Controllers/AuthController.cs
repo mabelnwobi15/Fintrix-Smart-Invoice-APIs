@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SmartInvoice.API.Data;
+using Microsoft.AspNetCore.Identity;
 using SmartInvoice.API.DTOs;
 using SmartInvoice.API.Models;
 using SmartInvoice.API.Services;
@@ -15,6 +16,8 @@ public class AuthController : ControllerBase
     private readonly AppDbContext _context;
     private readonly JwtService _jwtService;
 
+    private readonly PasswordHasher<User> _passwordHasher = new();
+
     public AuthController(AppDbContext context, JwtService jwtService)
     {
         _context = context;
@@ -23,34 +26,51 @@ public class AuthController : ControllerBase
 
     
     [HttpPost("register")]
-    public IActionResult Register(RegisterDto dto)
+public IActionResult Register(RegisterDto dto)
+{
+    if (_context.Users.Any(u => u.Email == dto.Email))
+        return Conflict("Email already exists");
+
+    var user = new User
     {
-        var user = new User
-        {
-            Name = dto.Name,
-            Email = dto.Email,
-            PasswordHash = dto.Password
-        };
+        Name = dto.Name,
+        Email = dto.Email
+    };
 
-        _context.Users.Add(user);
-        _context.SaveChanges();
+    user.PasswordHash = _passwordHasher.HashPassword(user, dto.Password);
 
-        return Ok(user);
-    }
+    _context.Users.Add(user);
+    _context.SaveChanges();
 
-    [HttpPost("login")]
-    public IActionResult Login(LoginDto dto)
+    return Ok(new
     {
-        var user = _context.Users
-            .FirstOrDefault(u => u.Email == dto.Email && u.PasswordHash == dto.Password);
+        user.Id,
+        user.Name,
+        user.Email
+    });
+}
 
-        if (user == null)
-            return Unauthorized();
+   [HttpPost("login")]
+public IActionResult Login(LoginDto dto)
+{
+    var user = _context.Users
+        .FirstOrDefault(u => u.Email == dto.Email);
 
-        var token = _jwtService.GenerateToken(user);
+    if (user == null)
+        return Unauthorized("Invalid email or password");
 
-        return Ok(new { token });
-    }
+    var result = _passwordHasher.VerifyHashedPassword(
+        user,
+        user.PasswordHash,
+        dto.Password);
+
+    if (result == PasswordVerificationResult.Failed)
+        return Unauthorized("Invalid email or password");
+
+    var token = _jwtService.GenerateToken(user);
+
+    return Ok(new { token });
+}
 
     [HttpGet("me")]
 [Authorize] // Only accessible with a valid JWT
